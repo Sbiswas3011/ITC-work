@@ -2,6 +2,7 @@ import os
 import json
 import copy
 import random
+import pandas as pd
 
 from google import genai
 from ortools.sat.python import cp_model
@@ -268,6 +269,34 @@ def build_model(config, jobs):
 # -----------------------------
 # RUN SYSTEM
 # -----------------------------
+# def run(instruction):
+#     config = BASE_CONFIG
+
+#     patch = get_llm_patch(config, instruction)
+
+#     print("PATCH:")
+#     print(json.dumps(patch, indent=2))
+
+#     config = apply_patch(config, patch)
+#     validate(config)
+
+#     model, job_day = build_model(config, jobs_data)
+
+#     solver = cp_model.CpSolver()
+#     solver.parameters.max_time_in_seconds = 10
+
+#     status = solver.Solve(model)
+
+#     if status not in [cp_model.FEASIBLE, cp_model.OPTIMAL]:
+#         print("No solution found")
+#         return
+
+#     print("\nSCHEDULE:\n")
+
+#     for j in jobs_data:
+#         print(j["id"], j["project"], solver.Value(job_day[j["id"]]))
+
+
 def run(instruction):
     config = BASE_CONFIG
 
@@ -290,10 +319,50 @@ def run(instruction):
         print("No solution found")
         return
 
-    print("\nSCHEDULE:\n")
-
+    # -----------------------------
+    # BUILD FLAT TABLE
+    # -----------------------------
+    rows = []
     for j in jobs_data:
-        print(j["id"], j["project"], solver.Value(job_day[j["id"]]))
+        rows.append({
+            "JobID": j["id"],
+            "Project": j["project"],
+            "Type": j["type"],
+            "Line": j["line"],
+            "Day": solver.Value(job_day[j["id"]])
+        })
+
+    df = pd.DataFrame(rows)
+
+    # -----------------------------
+    # BUILD LINE-DAY GRID
+    # -----------------------------
+    schedule = {line: [""] * NUM_DAYS for line in LINES}
+
+    for _, row in df.iterrows():
+        line = row["Line"]
+        day = row["Day"]
+        job = row["JobID"]
+
+        if schedule[line][day] == "":
+            schedule[line][day] = job
+        else:
+            schedule[line][day] += f", {job}"
+
+    final_df = pd.DataFrame.from_dict(schedule, orient="index")
+    final_df.columns = [f"Day {d}" for d in range(NUM_DAYS)]
+    final_df.index.name = "Line"
+
+    # -----------------------------
+    # WRITE EXCEL
+    # -----------------------------
+    file_name = "schedule_output.xlsx"
+
+    with pd.ExcelWriter(file_name, engine="openpyxl") as writer:
+        final_df.to_excel(writer, sheet_name="Plan")
+        df.to_excel(writer, sheet_name="Raw", index=False)
+
+    print(f"\nExcel generated: {file_name}")
 
 
 # -----------------------------
