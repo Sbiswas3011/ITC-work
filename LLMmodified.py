@@ -11,7 +11,7 @@ from ortools.sat.python import cp_model
 # -----------------------------
 # GEMINI API KEY SETUP
 # -----------------------------
-os.environ["GEMINI_API_KEY"] = "AIzaSyBCKflfH27M6sbrkP11zCk0EXAHBzaHON0"
+os.environ["GEMINI_API_KEY"] = "AIzaSyC9eesqjZ-OX5bQzNrq832HKFC4Mmd0rPE"
 
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
@@ -86,6 +86,8 @@ def generate_jobs():
 
 jobs_data = generate_jobs()
 
+print("Generated Jobs:")
+for j in jobs_data: print(j)
 
 # -----------------------------
 # GEMINI: JSON PATCH GENERATOR
@@ -365,8 +367,9 @@ def run(instruction):
     print(f"\nExcel generated: {file_name}")
 
 
-# -----------------------------
-# ENTRY POINT
-# -----------------------------
 if __name__ == "__main__":
     run("Make PT jobs conflict with FAT and increase L1 capacity to 7")
+    # run("Reduce L2 and L1 capacity to 1, set a 5-day gap for PT jobs, and ensure P1 and P2 never happen on the same day")
+    # run("Remove the precedence between Drive and DES, but add a new rule: FAT cannot happen until 5 days after DES. Also, no PT and PU jobs on the same day")
+    # run("Increase max_per_day to 4, but make sure Project P3 and P4 are no_overlap_projects. Also, increase L1 capacity to 10")
+    # run("Make PT jobs have a min_gap of 4, and add a spacing rule for FAT jobs with a min_gap of 2")
